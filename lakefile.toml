@@ -1,0 +1,10 @@
+name = "LC3-Lean"
+version = "0.1.0"
+defaultTargets = ["lc3-lean"]
+
+[[lean_lib]]
+name = "LC3Lean"
+
+[[lean_exe]]
+name = "lc3-lean"
+root = "Main"
