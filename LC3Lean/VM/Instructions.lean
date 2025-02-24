@@ -3,7 +3,7 @@
 namespace VM.Instructions
 
 -- opcodes
-inductive Opcode
+inductive Opcodes
 | OP_BR   -- branch
 | OP_ADD  -- add
 | OP_LD   -- load
@@ -21,5 +21,10 @@ inductive Opcode
 | OP_LEA  -- load effective address
 | OP_TRAP -- execute trap
 deriving Repr, DecidableEq, BEq
+
+-- auxiliary functions for op codes
+def todo {A : Type} : A := sorry
+
+def instr_op (instr : UInt16) : VM.Instructions.Opcodes := todo
 
 end VM.Instructions
