@@ -194,15 +194,21 @@ def op_str (instr : UInt16) (reg : Register) (mem : Memory) :
   let mem' := VM.Memory.write mem addr value
   some (reg, mem')
 
-def todo {A : Type} : A := sorry
+-- TODO decide whether trap routines get implemented in Lean or in Assembly
+def TRAP_PUTS := 0x22  -- output a word string
+def TRAP_GETC := 0x20  -- get character from keyboard, not echoed onto the terminal
+def TRAP_OUT := 0x21   -- output a character
+def TRAP_IN := 0x23    -- get character from keyboard, echoed onto the terminal
+def TRAP_PUTSP := 0x24 -- output a byte string
+def TRAP_HALT := 0x25   -- halt the program
+
 def op_trap (instr : UInt16) (reg : Register) (mem : Memory) :
-  Option (Register × Memory) := do todo
-  -- let trapvector8 := instr.land 0xFF
-  -- let reg' ← VM.Registers.write reg VM.Registers.R7 reg.pc
-  -- let addr := trapvector8
-  -- let pc := VM.Memory.read mem addr
-  -- let reg'' := { reg' with pc := pc }
-  -- some (reg'', mem)
+  Option (Register × Memory) := do
+  let trapvector8 := instr.land 0xFF
+  let reg ← VM.Registers.write reg 7 reg.pc -- write current PC to register 7
+  let pc := VM.Memory.read mem trapvector8
+  let reg := { reg with pc := pc }
+  some (reg,mem)
 
 def op_res (_ : UInt16) (_ : Register) (_ : Memory) :
   Option (Register × Memory) := none
@@ -217,42 +223,43 @@ def op_res (_ : UInt16) (_ : Register) (_ : Memory) :
 
 def execute_step (reg : Register) (mem : Memory) : Option (Register × Memory) := do
   -- 1. Load one instruction from memory at the address of the PC register.
-  let instr_addr := reg.pc
-  let instr := VM.Memory.read mem instr_addr
+  let instr := VM.Memory.read mem reg.pc
   -- 2. Increment the PC register.
-  let reg' := { reg with pc := reg.pc + 1 }
+  let reg := { reg with pc := reg.pc + 1 }
   -- 3. Look at the opcode to determine which type of instruction it should perform.
   let instr' ← VM.Instructions.instr_to_op instr
   -- 4. Perform the instruction using the parameters in the instruction.
-  let (reg'',mem') ←
+  let (reg,mem) ←
     match instr' with
-    | .OP_BR   => op_br instr reg' mem -- branch
-    | .OP_ADD  => op_add instr reg' mem -- add
-    | .OP_LD   => op_ld instr reg' mem -- load
-    | .OP_ST   => op_st instr reg' mem -- store
-    | .OP_JSR  => op_jsr instr reg' mem -- jump register
-    | .OP_AND  => op_and instr reg' mem -- bitwise and
-    | .OP_LDR  => op_ldr instr reg' mem -- load register
-    | .OP_STR  => op_str instr reg' mem -- store register
-    | .OP_RTI  => op_rti instr reg' mem -- unused
-    | .OP_NOT  => op_not instr reg' mem -- bitwise not
-    | .OP_LDI  => op_ldi instr reg' mem -- load indirect
-    | .OP_STI  => op_sti instr reg' mem -- store indirect
-    | .OP_JMP  => op_jmp instr reg' mem -- jump
-    | .OP_RES  => op_res instr reg' mem -- reserved (unused)
-    | .OP_LEA  => op_lea instr reg' mem -- load effective address
-    | .OP_TRAP => op_trap instr reg' mem -- execute trap
+    | .OP_BR   => op_br instr reg mem -- branch
+    | .OP_ADD  => op_add instr reg mem -- add
+    | .OP_LD   => op_ld instr reg mem -- load
+    | .OP_ST   => op_st instr reg mem -- store
+    | .OP_JSR  => op_jsr instr reg mem -- jump register
+    | .OP_AND  => op_and instr reg mem -- bitwise and
+    | .OP_LDR  => op_ldr instr reg mem -- load register
+    | .OP_STR  => op_str instr reg mem -- store register
+    | .OP_RTI  => op_rti instr reg mem -- unused
+    | .OP_NOT  => op_not instr reg mem -- bitwise not
+    | .OP_LDI  => op_ldi instr reg mem -- load indirect
+    | .OP_STI  => op_sti instr reg mem -- store indirect
+    | .OP_JMP  => op_jmp instr reg mem -- jump
+    | .OP_RES  => op_res instr reg mem -- reserved (unused)
+    | .OP_LEA  => op_lea instr reg mem -- load effective address
+    | .OP_TRAP => op_trap instr reg mem -- execute trap
   -- 5. Go back to step 1.
-  some (reg'',mem') -- execute reg' mem' (or could use concept of gas ... max steps)
+  some (reg,mem) -- execute reg' mem' (or could use concept of gas ... max steps)
 
-def execute_loop (reg : Register) (mem : Memory) : IO Unit := do
-  let mut reg' := reg
-  let mut mem' := mem
+def execute_loop : IO Unit := do
+  -- initialize register and memory
+  let mut reg := VM.Registers.init
+  let mut mem := VM.Memory.init
+  -- loop until
   while true do
-    match execute_step reg' mem' with
+    match execute_step reg mem with
     | some (new_reg, new_mem) =>
-      reg' := new_reg
-      mem' := new_mem
+      reg := new_reg
+      mem := new_mem
     | none =>
       break
 

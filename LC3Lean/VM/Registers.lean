@@ -28,10 +28,11 @@ structure Register where
   cond : ConditionFlag -- condition flags register (N, Z, P)
   deriving Repr, DecidableEq, BEq
 
-def init : Register :=
-  { r := #[0, 0, 0, 0, 0, 0, 0, 0]
-    pc := 0
-    cond := ConditionFlag.Z }
+def init : Register := {
+    r := #[0, 0, 0, 0, 0, 0, 0, 0]
+    pc := 0x3000 -- lower memory slots used for trap routines
+    cond := ConditionFlag.Z -- condition flag set initially to zero
+  }
 
 def uint16_to_reg (i : UInt16) : Option Registers :=
   if (i == 0) then some .R_R0 else
