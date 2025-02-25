@@ -33,75 +33,62 @@ def init : Register :=
     pc := 0
     cond := ConditionFlag.Z }
 
-def read (regs : Register) (index : Registers) : Option UInt16 :=
-  match index with
-  | .R_R0 => some (regs.r.get! 0)  -- get general-purpose registers
-  | .R_R1 => some (regs.r.get! 1)
-  | .R_R2 => some (regs.r.get! 2)
-  | .R_R3 => some (regs.r.get! 3)
-  | .R_R4 => some (regs.r.get! 4)
-  | .R_R5 => some (regs.r.get! 5)
-  | .R_R6 => some (regs.r.get! 6)
-  | .R_R7 => some (regs.r.get! 7)
+def uint16_to_reg (i : UInt16) : Option Registers :=
+  if (i == 0) then some .R_R0 else
+  if (i == 1) then some .R_R1 else
+  if (i == 2) then some .R_R2 else
+  if (i == 3) then some .R_R3 else
+  if (i == 4) then some .R_R4 else
+  if (i == 5) then some .R_R5 else
+  if (i == 6) then some .R_R6 else
+  if (i == 7) then some .R_R7 else
+  if (i == 8) then some .R_PC else
+  if (i == 9) then some .R_COND else
+  if (i == 10) then some .R_COUNT else
+  none
+
+def read (reg : Register) (index : UInt16) : Option UInt16 := do
+  let index' ← uint16_to_reg index
+  match index' with
+  | .R_R0 => some (reg.r.get! 0)  -- get general-purpose registers
+  | .R_R1 => some (reg.r.get! 1)
+  | .R_R2 => some (reg.r.get! 2)
+  | .R_R3 => some (reg.r.get! 3)
+  | .R_R4 => some (reg.r.get! 4)
+  | .R_R5 => some (reg.r.get! 5)
+  | .R_R6 => some (reg.r.get! 6)
+  | .R_R7 => some (reg.r.get! 7)
   | .R_PC => -- program counter
-      some regs.pc  -- get the program counter
+      some reg.pc  -- get the program counter
   | .R_COND =>
-      match regs.cond with -- get the condition flags
+      match reg.cond with -- get the condition flags
       | ConditionFlag.N => some 0 -- negative
       | ConditionFlag.Z => some 1 -- zero
       | ConditionFlag.P => some 2 -- positive
   | .R_COUNT => none
 
-def write (regs : Register) (index : Registers) (value : UInt16) : Option Register :=
-  match index with
+def write (reg : Register) (index : UInt16) (value : UInt16) : Option Register := do
+  let index' ← uint16_to_reg index
+  match index' with
   -- update general-purpose register
-  | .R_R0 => some { regs with r := regs.r.set! 0 value }
-  | .R_R1 => some { regs with r := regs.r.set! 1 value }
-  | .R_R2 => some { regs with r := regs.r.set! 2 value }
-  | .R_R3 => some { regs with r := regs.r.set! 3 value }
-  | .R_R4 => some { regs with r := regs.r.set! 4 value }
-  | .R_R5 => some { regs with r := regs.r.set! 5 value }
-  | .R_R6 => some { regs with r := regs.r.set! 6 value }
-  | .R_R7 => some { regs with r := regs.r.set! 7 value }
+  | .R_R0 => some { reg with r := reg.r.set! 0 value }
+  | .R_R1 => some { reg with r := reg.r.set! 1 value }
+  | .R_R2 => some { reg with r := reg.r.set! 2 value }
+  | .R_R3 => some { reg with r := reg.r.set! 3 value }
+  | .R_R4 => some { reg with r := reg.r.set! 4 value }
+  | .R_R5 => some { reg with r := reg.r.set! 5 value }
+  | .R_R6 => some { reg with r := reg.r.set! 6 value }
+  | .R_R7 => some { reg with r := reg.r.set! 7 value }
   | .R_PC => -- program counter
-      some { regs with pc := value }  -- update program counter
+      some { reg with pc := value }  -- update program counter
   | .R_COND =>
       if value = 0 then
-        some { regs with cond := ConditionFlag.N }  -- negative
+        some { reg with cond := ConditionFlag.N }  -- negative
       else if value = 1 then
-        some { regs with cond := ConditionFlag.Z }  -- zero
+        some { reg with cond := ConditionFlag.Z }  -- zero
       else if value = 2 then
-        some { regs with cond := ConditionFlag.P }  -- positive
+        some { reg with cond := ConditionFlag.P }  -- positive
       else none
   | .R_COUNT => none
-
-def read2 (regs : Register) (index : Nat) : Option UInt16 :=
-  if index < 8 then
-    some (regs.r.get! index)  -- get general-purpose registers
-  else if index = 8 then
-    some regs.pc  -- get the program counter
-  else if index = 9 then
-    match regs.cond with -- get the condition flags
-    | ConditionFlag.N => some 0 -- negative
-    | ConditionFlag.Z => some 1 -- zero
-    | ConditionFlag.P => some 2 -- positive
-  else
-    none  -- invalid register index
-
-def write2 (regs : Register) (index : Nat) (value : UInt16) : Option Register :=
-  if index < 8 then
-    some { regs with r := regs.r.set! index value }  -- update general-purpose register
-  else if index = 8 then
-    some { regs with pc := value }  -- update program counter
-  else if index = 9 then
-    if value = 0 then
-      some { regs with cond := ConditionFlag.N }  -- negative
-    else if value = 1 then
-      some { regs with cond := ConditionFlag.Z }  -- zero
-    else if value = 2 then
-      some { regs with cond := ConditionFlag.P }  -- positive
-    else none
-  else
-    regs  -- invalid register, return unchanged
 
 end VM.Registers
