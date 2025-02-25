@@ -4,7 +4,7 @@ import LC3Lean.VM.Memory
 import LC3Lean.VM.Registers
 import LC3Lean.VM.Instructions
 
-namespace Execution.VM
+namespace VM.Execution
 open VM.Memory
 open VM.Registers
 open VM.Instructions
@@ -250,17 +250,4 @@ def execute_step (reg : Register) (mem : Memory) : Option (Register × Memory) :
   -- 5. Go back to step 1.
   some (reg,mem) -- execute reg' mem' (or could use concept of gas ... max steps)
 
-def execute_loop : IO Unit := do
-  -- initialize register and memory
-  let mut reg := VM.Registers.init
-  let mut mem := VM.Memory.init
-  -- loop until
-  while true do
-    match execute_step reg mem with
-    | some (new_reg, new_mem) =>
-      reg := new_reg
-      mem := new_mem
-    | none =>
-      break
-
-end Execution.VM
+end VM.Execution
