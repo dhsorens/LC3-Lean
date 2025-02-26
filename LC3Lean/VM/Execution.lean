@@ -3,11 +3,13 @@
 import LC3Lean.VM.Memory
 import LC3Lean.VM.Registers
 import LC3Lean.VM.Instructions
+import LC3Lean.VM.Trap
 
 namespace VM.Execution
 open VM.Memory
 open VM.Registers
 open VM.Instructions
+open VM.Trap
 
 -- the auxiliary functions
 section aux
@@ -194,19 +196,21 @@ def op_str (instr : UInt16) (reg : Register) (mem : Memory) :
   let mem' := VM.Memory.write mem addr value
   some (reg, mem')
 
--- TODO decide whether trap routines get implemented in Lean or in Assembly
-def TRAP_PUTS := 0x22  -- output a word string
-def TRAP_GETC := 0x20  -- get character from keyboard, not echoed onto the terminal
-def TRAP_OUT := 0x21   -- output a character
-def TRAP_IN := 0x23    -- get character from keyboard, echoed onto the terminal
-def TRAP_PUTSP := 0x24 -- output a byte string
-def TRAP_HALT := 0x25   -- halt the program
+-- the codes and their corresponding memory slots
+def TRAP_PUTS : UInt16 := 0x22  -- output a word string
+def TRAP_GETC : UInt16 := 0x20  -- get character from keyboard, not echoed onto the terminal
+def TRAP_OUT : UInt16 := 0x21   -- output a character
+def TRAP_IN : UInt16 := 0x23    -- get character from keyboard, echoed onto the terminal
+def TRAP_PUTSP : UInt16 := 0x24 -- output a byte string
+def TRAP_HALT : UInt16 := 0x25   -- halt the program
 
+-- the trap routines could be implemented in Assembly but that will likely be inefficient;
+-- we instead implement them in Lean
 def op_trap (instr : UInt16) (reg : Register) (mem : Memory) :
   Option (Register × Memory) := do
-  let trapvector8 := instr.land 0xFF
+  let trap_routine := instr.land 0xFF -- trapvector8
   let reg ← VM.Registers.write reg 7 reg.pc -- write current PC to register 7
-  let pc := VM.Memory.read mem trapvector8
+  let pc := VM.Memory.read mem trap_routine
   let reg := { reg with pc := pc }
   some (reg,mem)
 
