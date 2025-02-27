@@ -1,13 +1,9 @@
 import LC3Lean.Memory
 import LC3Lean.Registers
--- import LC3Lean.Instructions
--- import Lean.MonadOption
 
 namespace Trap
 open Memory
 open Registers
-
--- trap codes
 
 
 section aux
