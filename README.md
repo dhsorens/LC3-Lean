@@ -17,11 +17,11 @@ This will give you a binary `.lake/build/bin/lc3-lean`
 Run an assembled program, e.g. 2048:
 
 ```
-.lake/build/bin/lc3-lean porgrams/2048.obj
+.lake/build/bin/lc3-lean programs/2048.obj
 ```
 
 If you add `path-to-dir/.lake/build/bin/` to your PATH you can simply run 
 
 ```
-lc3-lean porgrams/2048.obj
+lc3-lean programs/2048.obj
 ```
