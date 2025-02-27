@@ -24,28 +24,34 @@ section aux
 
 end aux
 
-def load_into_mem (file : String) (mem : Memory) : Option Memory := do
-  let o ← stringToUInt16 (file.take 2)
+def load_into_mem (file : ByteArray) (mem : Memory) : Option Memory := do
+  -- Need at least 2 bytes for origin
+  if file.size < 2 then none else
+  -- Get origin from first two bytes and swap endianness
+  let o := UInt16.ofNat (file.get! 0).toNat <<< 8 ||| UInt16.ofNat (file.get! 1).toNat
   let origin := swap16 o
   --
   let mut memory := mem
   let mut addr := origin
   let mut idx := 2
-  while idx < (Memory.MEMORY_MAX - origin.toNat) do
-    let byte1 := file.toList.get! idx
-    let byte2 := file.toList.get! (idx + 1)
-    let word := swap16 (Trap.char_to_uint16 byte1) <<< 8 ||| swap16 (Trap.char_to_uint16 byte2)
+  -- Process two bytes at a time until end of file
+  while idx + 1 < file.size do
+    -- Read two bytes and combine into a word
+    let byte1 := file.get! idx
+    let byte2 := file.get! (idx + 1)
+    let word := UInt16.ofNat byte1.toNat <<< 8 ||| UInt16.ofNat byte2.toNat
+    -- Write the word to memory (already in correct endianness)
     memory := Memory.write memory addr word
     addr := addr + 1
     idx := idx + 2
   --
-  some mem
+  some memory
 
 def load_file (file_path : String) (mem : Memory) : IO Memory := do
-  let file ← IO.FS.readFile file_path
+  let file ← IO.FS.readBinFile file_path
   match load_into_mem file mem with
   | some m => pure m
-  | none => throw $ IO.userError "Error: Input could not be processed"
+  | none => throw $ IO.userError "Error: Input file could not be processed"
 
 -- the main function
 def main (file_paths : List String) : IO Unit := do
