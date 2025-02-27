@@ -1,12 +1,12 @@
 -- entrypoint for running the VM
-import LC3Lean.VM.Memory
-import LC3Lean.VM.Registers
-import LC3Lean.VM.Instructions
-import LC3Lean.VM.Trap
-import LC3Lean.VM.Execution
+import LC3Lean.Memory
+import LC3Lean.Registers
+import LC3Lean.Instructions
+import LC3Lean.Trap
+import LC3Lean.Execution
 
-open VM.Memory
-open VM.Trap
+open Memory
+open Trap
 
 section aux
 
@@ -16,7 +16,7 @@ section aux
   def stringToUInt16 (s : String) : Option UInt16 :=
     match s.toNat? with
     | some n =>
-      if n <= VM.Memory.MEMORY_MAX then
+      if n <= Memory.MEMORY_MAX then
         some (UInt16.ofNat n)
       else
         none
@@ -31,29 +31,33 @@ def load_into_mem (file : String) (mem : Memory) : Option Memory := do
   let mut memory := mem
   let mut addr := origin
   let mut idx := 2
-  while idx < (VM.Memory.MEMORY_MAX - origin.toNat) do
+  while idx < (Memory.MEMORY_MAX - origin.toNat) do
     let byte1 := file.toList.get! idx
     let byte2 := file.toList.get! (idx + 1)
-    let word := swap16 (VM.Trap.char_to_uint16 byte1) <<< 8 ||| swap16 (VM.Trap.char_to_uint16 byte2)
-    memory := VM.Memory.write memory addr word
+    let word := swap16 (Trap.char_to_uint16 byte1) <<< 8 ||| swap16 (Trap.char_to_uint16 byte2)
+    memory := Memory.write memory addr word
     addr := addr + 1
     idx := idx + 2
   --
   some mem
 
-def load_file (file_name : String) (mem : Memory) : IO Memory := do
-  let file ← IO.FS.readFile file_name
+def load_file (file_path : String) (mem : Memory) : IO Memory := do
+  let file ← IO.FS.readFile file_path
   match load_into_mem file mem with
   | some m => pure m
   | none => throw $ IO.userError "Error: Input could not be processed"
 
-def execute_loop : IO Unit := do
+-- the main function
+def main (file_paths : List String) : IO Unit := do
   -- initialize register and memory
-  let mut reg := VM.Registers.init
-  let mut mem := VM.Memory.init
+  let mut reg := Registers.init
+  let mut mem := Memory.init
+  -- load the code into memory to execute
+  let file_path := file_paths.get! 0
+  mem ← load_file file_path mem
   -- loop until
   while true do
-    match VM.Execution.execute_step reg mem with
+    match Execution.execute_step reg mem with
     | some (new_reg, new_mem) =>
       reg := new_reg
       mem := new_mem

@@ -1,5 +1,5 @@
 -- memory model defined by an array (or a map)
-namespace VM.Memory
+namespace Memory
 
 def MEMORY_MAX := 2 ^ 16
 
@@ -16,4 +16,4 @@ def read (mem : Memory) (addr : UInt16) : UInt16 :=
 def write (mem : Memory) (addr : UInt16) (val : UInt16) : Memory :=
   { data := mem.data.set! addr.val val }
 
-end VM.Memory
+end Memory

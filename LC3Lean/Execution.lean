@@ -1,15 +1,15 @@
 -- Implement execution logic.
 -- specification: https://www.jmeiners.com/lc3-vm/supplies/lc3-isa.pdf
-import LC3Lean.VM.Memory
-import LC3Lean.VM.Registers
-import LC3Lean.VM.Instructions
-import LC3Lean.VM.Trap
+import LC3Lean.Memory
+import LC3Lean.Registers
+import LC3Lean.Instructions
+import LC3Lean.Trap
 
-namespace VM.Execution
-open VM.Memory
-open VM.Registers
-open VM.Instructions
-open VM.Trap
+namespace Execution
+open Memory
+open Registers
+open Instructions
+open Trap
 
 -- the auxiliary functions
 section aux
@@ -24,9 +24,9 @@ def sign_extend (x : UInt16) (bit_count : UInt16) : UInt16 :=
 
 def set_condition_codes (reg : Register) (value : UInt16) : Register :=
   let cond :=
-    if value == 0 then VM.Registers.ConditionFlag.Z
-    else if value.land 0x8000 != 0 then VM.Registers.ConditionFlag.N
-    else VM.Registers.ConditionFlag.P
+    if value == 0 then Registers.ConditionFlag.Z
+    else if value.land 0x8000 != 0 then Registers.ConditionFlag.N
+    else Registers.ConditionFlag.P
   { reg with cond := cond }
 
 end aux
@@ -36,39 +36,39 @@ def op_add (instr : UInt16) (reg : Register) (mem : Memory) :
   Option (Register × Memory) := do
   let dr  := (instr >>> 9).land 0x7
   let sr1 := (instr >>> 6).land 0x7
-  let res1 ← VM.Registers.read reg sr1
+  let res1 ← Registers.read reg sr1
   -- if bit[5] == 0 then DR = SR1 + SR2
   if (instr >>> 5).land 0x1 == 0x0 then
     let sr2 := instr.land 0x7
     -- load from register
-    let res2 ← VM.Registers.read reg sr2
+    let res2 ← Registers.read reg sr2
     -- add them together and write to the register
-    let reg' ← VM.Registers.write reg dr (res1 + res2)
+    let reg' ← Registers.write reg dr (res1 + res2)
     some (reg', mem)
   -- else DR = SR1 + SEXT(imm5)
   else -- (instr >>> 5).land 0x1 == 0x1
     let imm := sign_extend (instr.land 0x1F) 5
     -- add them together and write to the register
-    let reg' ← VM.Registers.write reg dr (res1 + imm)
+    let reg' ← Registers.write reg dr (res1 + imm)
     some (reg', mem)
 
 def op_and (instr : UInt16) (reg : Register) (mem : Memory) :
   Option (Register × Memory) := do
   let dr  := (instr >>> 9).land 0x7
   let sr1 := (instr >>> 6).land 0x7
-  let res1 ← VM.Registers.read reg sr1
+  let res1 ← Registers.read reg sr1
   -- if bit[5] == 0 then DR = SR1 AND SR2
   if (instr >>> 5).land 0x1 == 0x0 then
     let sr2 := instr.land 0x7
     -- load from register
-    let res2 ← VM.Registers.read reg sr2
+    let res2 ← Registers.read reg sr2
     -- take .land and write to the register
-    let reg' ← VM.Registers.write reg dr (res1.land res2)
+    let reg' ← Registers.write reg dr (res1.land res2)
     some (reg', mem)
   else -- (instr >>> 5).land 0x1 == 0x1
     let imm := sign_extend (instr.land 0x31) 5
     -- take .land and write to the register
-    let reg' ← VM.Registers.write reg dr (res1.land imm)
+    let reg' ← Registers.write reg dr (res1.land imm)
     some (reg', mem)
 
 def op_br (instr : UInt16) (reg : Register) (mem : Memory) :
@@ -77,9 +77,9 @@ def op_br (instr : UInt16) (reg : Register) (mem : Memory) :
   let z := (instr >>> 10).land 0x1
   let p := (instr >>> 11).land 0x1
   let cond := reg.cond
-  if (n == 0x1 && cond == VM.Registers.ConditionFlag.N) ||
-     (z == 0x1 && cond == VM.Registers.ConditionFlag.Z) ||
-     (p == 0x1 && cond == VM.Registers.ConditionFlag.P) then
+  if (n == 0x1 && cond == Registers.ConditionFlag.N) ||
+     (z == 0x1 && cond == Registers.ConditionFlag.Z) ||
+     (p == 0x1 && cond == Registers.ConditionFlag.P) then
   let offset := sign_extend (instr.land 0x1FF) 9
   let reg' := { reg with pc := reg.pc + offset }
   some (reg', mem)
@@ -111,12 +111,12 @@ def op_ld (instr : UInt16) (reg : Register) (mem : Memory) :
   let dr := (instr >>> 9).land 0x7
   let offset := sign_extend (instr.land 0x1FF) 9
   let addr := reg.pc + offset
-  let value := VM.Memory.read mem addr
-  let reg' ← VM.Registers.write reg dr value
+  let value := Memory.read mem addr
+  let reg' ← Registers.write reg dr value
   let cond :=
-    if value == 0 then VM.Registers.ConditionFlag.Z
-    else if value.land 0x8000 != 0 then VM.Registers.ConditionFlag.N
-    else VM.Registers.ConditionFlag.P
+    if value == 0 then Registers.ConditionFlag.Z
+    else if value.land 0x8000 != 0 then Registers.ConditionFlag.N
+    else Registers.ConditionFlag.P
   let reg'' := { reg' with cond := cond }
   some (reg'', mem)
 
@@ -125,9 +125,9 @@ def op_ldi (instr : UInt16) (reg : Register) (mem : Memory) :
   let dr := (instr >>> 9).land 0x7
   let offset := sign_extend (instr.land 0x1FF) 9
   let addr := reg.pc + offset
-  let indirect_addr := VM.Memory.read mem addr
-  let value := VM.Memory.read mem indirect_addr
-  let reg' ← VM.Registers.write reg dr value
+  let indirect_addr := Memory.read mem addr
+  let value := Memory.read mem indirect_addr
+  let reg' ← Registers.write reg dr value
   let reg'' := set_condition_codes reg' value
   some (reg'', mem)
 
@@ -136,10 +136,10 @@ def op_ldr (instr : UInt16) (reg : Register) (mem : Memory) :
   let dr := (instr >>> 9).land 0x7
   let base_r := (instr >>> 6).land 0x7
   let offset := sign_extend (instr.land 0x3F) 6
-  let base_val ← VM.Registers.read reg base_r
+  let base_val ← Registers.read reg base_r
   let addr := base_val + offset
-  let value := VM.Memory.read mem addr
-  let reg' ← VM.Registers.write reg dr value
+  let value := Memory.read mem addr
+  let reg' ← Registers.write reg dr value
   let reg'' := set_condition_codes reg' value
   some (reg'', mem)
 
@@ -148,7 +148,7 @@ def op_lea (instr : UInt16) (reg : Register) (mem : Memory) :
   let dr := (instr >>> 9).land 0x7
   let offset := sign_extend (instr.land 0x1FF) 9
   let addr := reg.pc + offset
-  let reg' ← VM.Registers.write reg dr addr
+  let reg' ← Registers.write reg dr addr
   let reg'' := set_condition_codes reg' addr
   some (reg'', mem)
 
@@ -156,14 +156,14 @@ def op_not (instr : UInt16) (reg : Register) (mem : Memory) :
   Option (Register × Memory) := do
   let dr := (instr >>> 9).land 0x7
   let sr := (instr >>> 6).land 0x7
-  let res ← VM.Registers.read reg sr
+  let res ← Registers.read reg sr
   let value := res.complement
-  let reg' ← VM.Registers.write reg dr value
+  let reg' ← Registers.write reg dr value
   let reg'' := set_condition_codes reg' value
   some (reg'', mem)
 
 -- unused
-def op_rti (instr : UInt16) (reg : Register) (mem : Memory) :
+def op_rti (_ : UInt16) (_ : Register) (_ : Memory) :
   Option (Register × Memory) := none
 
 def op_st (instr : UInt16) (reg : Register) (mem : Memory) :
@@ -171,8 +171,8 @@ def op_st (instr : UInt16) (reg : Register) (mem : Memory) :
   let sr := (instr >>> 9).land 0x7
   let offset := sign_extend (instr.land 0x1FF) 9
   let addr := reg.pc + offset
-  let value ← VM.Registers.read reg sr
-  let mem' := VM.Memory.write mem addr value
+  let value ← Registers.read reg sr
+  let mem' := Memory.write mem addr value
   some (reg, mem')
 
 def op_sti (instr : UInt16) (reg : Register) (mem : Memory) :
@@ -180,9 +180,9 @@ def op_sti (instr : UInt16) (reg : Register) (mem : Memory) :
   let sr := (instr >>> 9).land 0x7
   let offset := sign_extend (instr.land 0x1FF) 9
   let addr := reg.pc + offset
-  let indirect_addr := VM.Memory.read mem addr
-  let value ← VM.Registers.read reg sr
-  let mem' := VM.Memory.write mem indirect_addr value
+  let indirect_addr := Memory.read mem addr
+  let value ← Registers.read reg sr
+  let mem' := Memory.write mem indirect_addr value
   some (reg, mem')
 
 def op_str (instr : UInt16) (reg : Register) (mem : Memory) :
@@ -190,10 +190,10 @@ def op_str (instr : UInt16) (reg : Register) (mem : Memory) :
   let sr := (instr >>> 9).land 0x7
   let base_r := (instr >>> 6).land 0x7
   let offset := sign_extend (instr.land 0x3F) 6
-  let base_val ← VM.Registers.read reg base_r
+  let base_val ← Registers.read reg base_r
   let addr := base_val + offset
-  let value ← VM.Registers.read reg sr
-  let mem' := VM.Memory.write mem addr value
+  let value ← Registers.read reg sr
+  let mem' := Memory.write mem addr value
   some (reg, mem')
 
 -- the codes and their corresponding memory slots
@@ -209,8 +209,8 @@ def TRAP_HALT : UInt16 := 0x25   -- halt the program
 def op_trap (instr : UInt16) (reg : Register) (mem : Memory) :
   Option (Register × Memory) := do
   let trap_routine := instr.land 0xFF -- trapvector8
-  let reg ← VM.Registers.write reg 7 reg.pc -- write current PC to register 7
-  let pc := VM.Memory.read mem trap_routine
+  let reg ← Registers.write reg 7 reg.pc -- write current PC to register 7
+  let pc := Memory.read mem trap_routine
   let reg := { reg with pc := pc }
   some (reg,mem)
 
@@ -227,11 +227,11 @@ def op_res (_ : UInt16) (_ : Register) (_ : Memory) :
 
 def execute_step (reg : Register) (mem : Memory) : Option (Register × Memory) := do
   -- 1. Load one instruction from memory at the address of the PC register.
-  let instr := VM.Memory.read mem reg.pc
+  let instr := Memory.read mem reg.pc
   -- 2. Increment the PC register.
   let reg := { reg with pc := reg.pc + 1 }
   -- 3. Look at the opcode to determine which type of instruction it should perform.
-  let instr' ← VM.Instructions.instr_to_op instr
+  let instr' ← Instructions.instr_to_op instr
   -- 4. Perform the instruction using the parameters in the instruction.
   let (reg,mem) ←
     match instr' with
@@ -254,4 +254,4 @@ def execute_step (reg : Register) (mem : Memory) : Option (Register × Memory) :
   -- 5. Go back to step 1.
   some (reg,mem) -- execute reg' mem' (or could use concept of gas ... max steps)
 
-end VM.Execution
+end Execution

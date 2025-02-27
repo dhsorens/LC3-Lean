@@ -1,6 +1,6 @@
 -- Implement general-purpose registers, program counter, and condition flags.
 
-namespace VM.Registers
+namespace Registers
 
 inductive Registers :=
 | R_R0
@@ -92,4 +92,4 @@ def write (reg : Register) (index : UInt16) (value : UInt16) : Option Register :
       else none
   | .R_COUNT => none
 
-end VM.Registers
+end Registers

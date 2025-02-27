@@ -1,6 +1,6 @@
 -- Define opcodes and their behavior.
 
-namespace VM.Instructions
+namespace Instructions
 
 -- opcodes
 inductive Opcodes
@@ -25,7 +25,7 @@ deriving Repr, DecidableEq, BEq
 -- auxiliary functions for op codes
 
 --   takes
-def instr_to_op (instr : UInt16) : Option VM.Instructions.Opcodes :=
+def instr_to_op (instr : UInt16) : Option Instructions.Opcodes :=
   if      ((instr.shiftRight 12).land 0xF) == 0x0001 then some .OP_ADD
   else if ((instr.shiftRight 12).land 0xF) == 0x0101 then some .OP_AND
   else if ((instr.shiftRight 12).land 0xF) == 0x0000 then some .OP_BR
@@ -45,4 +45,4 @@ def instr_to_op (instr : UInt16) : Option VM.Instructions.Opcodes :=
   else none
 
 
-end VM.Instructions
+end Instructions

@@ -1,11 +1,11 @@
-import LC3Lean.VM.Memory
-import LC3Lean.VM.Registers
--- import LC3Lean.VM.Instructions
+import LC3Lean.Memory
+import LC3Lean.Registers
+-- import LC3Lean.Instructions
 -- import Lean.MonadOption
 
-namespace VM.Trap
-open VM.Memory
-open VM.Registers
+namespace Trap
+open Memory
+open Registers
 
 -- trap codes
 
@@ -32,15 +32,15 @@ end aux
 --  one character per memory location, starting with the address specified in R0.
 -- Writing terminates with the occurrence of x0000 in a memory location.
 def trap_puts (reg : Register) (mem : Memory) : IO Unit := do
-  let addr ← match (VM.Registers.read reg 0) with
+  let addr ← match (Registers.read reg 0) with
     | some a => pure a
     | none => throw $ IO.userError "Nothing in storage"
-  let mut c := VM.Memory.read mem addr
+  let mut c := Memory.read mem addr
   let mut index := addr
   while c != 0 do
     IO.print (uint16_to_char c)
     index := index + 1
-    c := VM.Memory.read mem index
+    c := Memory.read mem index
 
   -- Read a single character from the keyboard.
   -- The character is not echoed onto the console.
@@ -48,14 +48,14 @@ def trap_puts (reg : Register) (mem : Memory) : IO Unit := do
   -- The high eight bits of R0 are cleared.
 def trap_getc (reg : Register) : IO Register := do
   let c ← get_char_from_terminal
-  let reg := VM.Registers.write reg 0 (clear_high_bits (char_to_uint16 c))
+  let reg := Registers.write reg 0 (clear_high_bits (char_to_uint16 c))
   match reg with
   | some r =>  pure r
   | none => throw $ IO.userError "Error: No input provided."
 
 -- Write a character in R0[7:0] to the console display.
 def trap_out (reg : Register) : IO Unit := do
-  match VM.Registers.read reg 0 with
+  match Registers.read reg 0 with
   | some char => IO.print (uint16_to_char (clear_high_bits char))
   | none => throw $ IO.userError "Error: Unable to access storage."
 
@@ -66,7 +66,7 @@ def trap_in (reg : Register) : IO Register := do
   IO.print "Enter a character: "
   let c ← get_char_from_terminal
   IO.print c
-  match VM.Registers.write reg 0 (clear_high_bits (char_to_uint16 c)) with
+  match Registers.write reg 0 (clear_high_bits (char_to_uint16 c)) with
   | some r => pure r
   | none => throw $ IO.userError "Error: Unable to access storage."
 
@@ -77,10 +77,10 @@ def trap_in (reg : Register) : IO Register := do
 -- (A character string consisting of an odd number of characters to be written will have x00 in bits [15:8] of the memory location containing the last character to be written.)
 -- Writing terminates with the occurrence of x0000 in a memory location.
 def trap_putsp (mem : Memory) (reg : Register) : IO Unit := do
-  let addr ← match (VM.Registers.read reg 0) with
+  let addr ← match (Registers.read reg 0) with
     | some a => pure a
     | none => throw $ IO.userError "Nothing in storage"
-  let mut c := VM.Memory.read mem addr
+  let mut c := Memory.read mem addr
   let mut index := addr
   while c != 0 do
     let c1 := clear_high_bits c
@@ -89,7 +89,7 @@ def trap_putsp (mem : Memory) (reg : Register) : IO Unit := do
     if c2 == 0 then c := 0 else
     IO.print (uint16_to_char c2)
     index := index + 1
-    c := VM.Memory.read mem index
+    c := Memory.read mem index
 
 -- Halt execution and print a message on the console.
 def trap_halt (running : IO.Ref Bool) : IO Unit := do
@@ -132,4 +132,4 @@ def op_trap_io (instr : Trapcodes) (reg : Register) (mem : Memory) :
 
 
 
-end VM.Trap
+end Trap
