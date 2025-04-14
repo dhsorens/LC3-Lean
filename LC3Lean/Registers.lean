@@ -2,7 +2,7 @@
 
 namespace Registers
 
-inductive Registers :=
+inductive Registers where
 | R_R0
 | R_R1
 | R_R2
@@ -14,19 +14,19 @@ inductive Registers :=
 | R_PC -- program counter
 | R_COND
 | R_COUNT
-deriving Repr, DecidableEq, BEq
+deriving DecidableEq, BEq
 
 inductive ConditionFlag
 | P -- positive
 | Z -- zero
 | N -- negative
-deriving Repr, DecidableEq, BEq
+deriving DecidableEq, BEq
 
 structure Register where
   r : Array UInt16 := #[0, 0, 0, 0, 0, 0, 0, 0]  -- 8 general-purpose registers
   pc : UInt16 -- program counter
   cond : ConditionFlag -- condition flags register (N, Z, P)
-  deriving Repr, DecidableEq, BEq
+  deriving DecidableEq, BEq
 
 def init : Register := {
     r := #[0, 0, 0, 0, 0, 0, 0, 0]
@@ -51,14 +51,14 @@ def uint16_to_reg (i : UInt16) : Option Registers :=
 def read (reg : Register) (index : UInt16) : Option UInt16 := do
   let index' ← uint16_to_reg index
   match index' with
-  | .R_R0 => some (reg.r.get! 0)  -- get general-purpose registers
-  | .R_R1 => some (reg.r.get! 1)
-  | .R_R2 => some (reg.r.get! 2)
-  | .R_R3 => some (reg.r.get! 3)
-  | .R_R4 => some (reg.r.get! 4)
-  | .R_R5 => some (reg.r.get! 5)
-  | .R_R6 => some (reg.r.get! 6)
-  | .R_R7 => some (reg.r.get! 7)
+  | .R_R0 => some (reg.r[0]!)  -- get general-purpose registers
+  | .R_R1 => some (reg.r[1]!)
+  | .R_R2 => some (reg.r[2]!)
+  | .R_R3 => some (reg.r[3]!)
+  | .R_R4 => some (reg.r[4]!)
+  | .R_R5 => some (reg.r[5]!)
+  | .R_R6 => some (reg.r[6]!)
+  | .R_R7 => some (reg.r[7]!)
   | .R_PC => -- program counter
       some reg.pc  -- get the program counter
   | .R_COND =>

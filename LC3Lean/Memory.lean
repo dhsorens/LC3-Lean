@@ -5,15 +5,15 @@ def MEMORY_MAX := 2 ^ 16
 
 structure Memory where
   data : Array UInt16 := Array.mkArray MEMORY_MAX (0 : UInt16)
-  deriving Repr, DecidableEq, BEq
+  deriving DecidableEq, BEq
 
 def init : Memory :=
   { data := Array.mkArray (2 ^ 16) (0 : UInt16) }
 
 def read (mem : Memory) (addr : UInt16) : UInt16 :=
-  mem.data.get! addr.val
+  mem.data[addr.toFin]!
 
 def write (mem : Memory) (addr : UInt16) (val : UInt16) : Memory :=
-  { data := mem.data.set! addr.val val }
+  { data := mem.data.set! addr.toFin val }
 
 end Memory
