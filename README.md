@@ -42,7 +42,7 @@ The VM supports:
 
 Any `.obj` file assembled for the LC3 ISA should work. You can find LC3 programs to run [here](https://github.com/justinmeiners/lc3-vm) or assemble your own using an [LC3 assembler](https://github.com/chiragsakhuja/lc3tools).
 
-**Note:** Input currently requires pressing Enter after each keystroke. Raw terminal mode is not yet implemented.
+**Note:** Raw terminal mode is provided via a small C FFI (see `c/terminal.c`), which enables character-at-a-time input and non-blocking keyboard polling on POSIX systems. All VM logic — instruction execution, memory, registers, trap routines, and formal proofs — is implemented entirely in Lean 4. The C code is solely for terminal I/O.
 
 ## Project Structure
 
@@ -57,6 +57,7 @@ Any `.obj` file assembled for the LC3 ISA should work. You can find LC3 programs
   - `RegisterLemmas.lean` — Register read/write properties
   - `MemoryLemmas.lean` — Memory read/write properties
 - **`Main.lean`** — Entry point, binary loader, execution loop with MMIO and I/O trap dispatch
+- **`c/terminal.c`** — C FFI for raw terminal mode (POSIX `termios`/`select`)
 - **`programs/`** — LC3 object files (2048, Rogue)
 
 ## Contributions

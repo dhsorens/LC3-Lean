@@ -4,6 +4,7 @@ import LC3Lean.Registers
 import LC3Lean.Instructions
 import LC3Lean.Execution
 import LC3Lean.Trap
+import LC3Lean.Terminal
 
 open Memory
 open Trap
@@ -75,17 +76,16 @@ def mem_read_io (mem : Memory) (addr : UInt16) (pending_key : IO.Ref (Option UIn
       let mem := Memory.write mem KBSR 0x8000
       pure (0x8000, mem)
     | none =>
-      -- No key pending: block and read one from stdin
-      let handle ← IO.getStdin
-      let input ← handle.getLine
-      match input.toList with
-      | c :: _ =>
+      -- Non-blocking check for key input
+      let hasKey ← Terminal.checkKey
+      if hasKey then
+        let c ← Terminal.readChar
         let key := Trap.clear_high_bits (Trap.char_to_uint16 c)
         pending_key.set (some key)
         let mem := Memory.write mem KBSR 0x8000
         let mem := Memory.write mem KBDR key
         pure (0x8000, mem)
-      | [] =>
+      else
         pure (0, mem)
   else if addr == KBDR then
     -- Read keyboard data and clear pending key
@@ -168,30 +168,35 @@ def main (file_paths : List String) : IO Unit := do
   mem ← load_file file_path mem
   -- pending key buffer for MMIO
   let pending_key ← IO.mkRef (none : Option UInt16)
-  -- execution loop
-  while true do
-    let instr := Memory.read mem reg.pc
-    let opcode := Instructions.instr_to_op instr
-    -- intercept TRAP instructions for IO
-    if opcode == some .OP_TRAP then
-      let reg_stepped := { reg with pc := reg.pc + 1 }
-      match Registers.write reg_stepped 7 reg_stepped.pc with
-      | none => break
-      | some reg_with_r7 =>
-        match decode_trap instr with
-        | some .TRAP_HALT =>
-          IO.println "HALT"
-          break
-        | some trapcode =>
-          let (new_reg, new_mem) ← Trap.op_trap_io trapcode reg_with_r7 mem
+  -- enable raw terminal mode for character-at-a-time input
+  Terminal.enableRawMode
+  try
+    -- execution loop
+    while true do
+      let instr := Memory.read mem reg.pc
+      let opcode := Instructions.instr_to_op instr
+      -- intercept TRAP instructions for IO
+      if opcode == some .OP_TRAP then
+        let reg_stepped := { reg with pc := reg.pc + 1 }
+        match Registers.write reg_stepped 7 reg_stepped.pc with
+        | none => break
+        | some reg_with_r7 =>
+          match decode_trap instr with
+          | some .TRAP_HALT =>
+            IO.println "HALT"
+            break
+          | some trapcode =>
+            let (new_reg, new_mem) ← Trap.op_trap_io trapcode reg_with_r7 mem
+            reg := new_reg
+            mem := new_mem
+          | none => break
+      else
+        -- IO-aware execution step (handles MMIO)
+        match ← execute_step_io reg mem pending_key with
+        | some (new_reg, new_mem) =>
           reg := new_reg
           mem := new_mem
-        | none => break
-    else
-      -- IO-aware execution step (handles MMIO)
-      match ← execute_step_io reg mem pending_key with
-      | some (new_reg, new_mem) =>
-        reg := new_reg
-        mem := new_mem
-      | none =>
-        break
+        | none =>
+          break
+  finally
+    Terminal.disableRawMode
