@@ -69,10 +69,6 @@ end validity
 section read_write
 
 -- read after write to the same GP register index returns the written value
-private theorem rw_same_tactic (reg : Register) (v : UInt16) (reg' : Register)
-    (i : Nat) (h_lt : i < 8) :
-    i < reg.r.size := by rw [reg.r_size]; exact h_lt
-
 theorem read_write_same_0 (reg : Register) (v : UInt16) (reg' : Register) :
     Registers.write reg 0 v = some reg' → Registers.read reg' 0 = some v := by
   unfold Registers.write Registers.read Registers.uint16_to_reg

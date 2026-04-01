@@ -129,7 +129,7 @@ theorem op_br_spec (instr : UInt16) (reg : Register) (mem : Memory) :
     · rw [if_pos h_cond] at heq
       obtain ⟨h1, h2⟩ := Prod.mk.inj (Option.some.inj heq)
       subst h1; subst h2
-      simp [Bool.or_eq_true, Bool.and_eq_true, cond_beq_eq] at h_cond
+      simp [Bool.or_eq_true, Bool.and_eq_true] at h_cond
       refine ⟨rfl, fun _ => rfl, ?_⟩
       intro h_not; exfalso
       rcases h_cond with (⟨h1, h2⟩ | ⟨h1, h2⟩) | ⟨h1, h2⟩
@@ -141,7 +141,7 @@ theorem op_br_spec (instr : UInt16) (reg : Register) (mem : Memory) :
       subst h1; subst h2
       refine ⟨rfl, ?_, fun _ => rfl⟩
       intro h_prop; exfalso; apply h_cond
-      simp [Bool.or_eq_true, Bool.and_eq_true, cond_beq_eq]
+      simp [Bool.or_eq_true, Bool.and_eq_true]
       rcases h_prop with ⟨h1, h2⟩ | ⟨h1, h2⟩ | ⟨h1, h2⟩
       · exact Or.inl (Or.inl ⟨h1, h2⟩)
       · exact Or.inl (Or.inr ⟨h1, h2⟩)
