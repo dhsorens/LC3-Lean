@@ -22,6 +22,10 @@ inductive ConditionFlag
 | N -- negative
 deriving DecidableEq, BEq
 
+instance : LawfulBEq ConditionFlag where
+  eq_of_beq {a b} h := by cases a <;> cases b <;> first | rfl | exact absurd h (by decide)
+  rfl {a} := by cases a <;> decide
+
 structure Register where
   r : Array UInt16 := #[0, 0, 0, 0, 0, 0, 0, 0]  -- 8 general-purpose registers
   r_size : r.size = 8 := by decide
