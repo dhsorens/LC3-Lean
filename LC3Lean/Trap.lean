@@ -81,7 +81,7 @@ def trap_putsp (mem : Memory) (reg : Register) : IO Unit := do
   while c != 0 do
     let c1 := clear_high_bits c
     IO.print (uint16_to_char c1)
-    let c2 := clear_low_bits c
+    let c2 := (clear_low_bits c) >>> 8
     if c2 == 0 then c := 0 else
     IO.print (uint16_to_char c2)
     index := index + 1
