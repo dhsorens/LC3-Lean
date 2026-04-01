@@ -24,9 +24,9 @@ deriving DecidableEq, BEq
 
 structure Register where
   r : Array UInt16 := #[0, 0, 0, 0, 0, 0, 0, 0]  -- 8 general-purpose registers
+  r_size : r.size = 8 := by decide
   pc : UInt16 -- program counter
   cond : ConditionFlag -- condition flags register (N, Z, P)
-  deriving DecidableEq, BEq
 
 def init : Register := {
     r := #[0, 0, 0, 0, 0, 0, 0, 0]
@@ -68,18 +68,21 @@ def read (reg : Register) (index : UInt16) : Option UInt16 := do
       | ConditionFlag.P => some 2 -- positive
   | .R_COUNT => none
 
+private theorem size_set! (arr : Array α) (i : Nat) (v : α) (h : arr.size = n) :
+    (arr.set! i v).size = n := by simp [h]
+
 def write (reg : Register) (index : UInt16) (value : UInt16) : Option Register := do
   let index' ← uint16_to_reg index
   match index' with
   -- update general-purpose register
-  | .R_R0 => some { reg with r := reg.r.set! 0 value }
-  | .R_R1 => some { reg with r := reg.r.set! 1 value }
-  | .R_R2 => some { reg with r := reg.r.set! 2 value }
-  | .R_R3 => some { reg with r := reg.r.set! 3 value }
-  | .R_R4 => some { reg with r := reg.r.set! 4 value }
-  | .R_R5 => some { reg with r := reg.r.set! 5 value }
-  | .R_R6 => some { reg with r := reg.r.set! 6 value }
-  | .R_R7 => some { reg with r := reg.r.set! 7 value }
+  | .R_R0 => some { reg with r := reg.r.set! 0 value, r_size := size_set! _ _ _ reg.r_size }
+  | .R_R1 => some { reg with r := reg.r.set! 1 value, r_size := size_set! _ _ _ reg.r_size }
+  | .R_R2 => some { reg with r := reg.r.set! 2 value, r_size := size_set! _ _ _ reg.r_size }
+  | .R_R3 => some { reg with r := reg.r.set! 3 value, r_size := size_set! _ _ _ reg.r_size }
+  | .R_R4 => some { reg with r := reg.r.set! 4 value, r_size := size_set! _ _ _ reg.r_size }
+  | .R_R5 => some { reg with r := reg.r.set! 5 value, r_size := size_set! _ _ _ reg.r_size }
+  | .R_R6 => some { reg with r := reg.r.set! 6 value, r_size := size_set! _ _ _ reg.r_size }
+  | .R_R7 => some { reg with r := reg.r.set! 7 value, r_size := size_set! _ _ _ reg.r_size }
   | .R_PC => -- program counter
       some { reg with pc := value }  -- update program counter
   | .R_COND =>
