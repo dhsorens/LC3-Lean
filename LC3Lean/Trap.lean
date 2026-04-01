@@ -1,5 +1,6 @@
 import LC3Lean.Memory
 import LC3Lean.Registers
+import LC3Lean.Terminal
 
 namespace Trap
 open Memory
@@ -8,12 +9,7 @@ open Registers
 
 section aux
 
-  def get_char_from_terminal : IO Char := do
-    let handle ← IO.getStdin
-    let input ← handle.getLine -- read one 32-bit character
-    match input.toList with
-    | c :: _ => pure c  -- Return the first character
-    | [] => throw $ IO.userError "Error: No input provided."
+  def get_char_from_terminal : IO Char := Terminal.readChar
 
   def char_to_uint16 (c : Char) : UInt16 := UInt16.ofNat (c.val.toNat)
   def uint16_to_char (u : UInt16) : Char := Char.ofNat (u.toNat)
