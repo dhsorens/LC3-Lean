@@ -26,23 +26,24 @@ deriving Repr, DecidableEq, BEq
 
 --   takes
 def instr_to_op (instr : UInt16) : Option Instructions.Opcodes :=
-  if      ((instr.shiftRight 12).land 0xF) == 0x0001 then some .OP_ADD
-  else if ((instr.shiftRight 12).land 0xF) == 0x0101 then some .OP_AND
-  else if ((instr.shiftRight 12).land 0xF) == 0x0000 then some .OP_BR
-  else if ((instr.shiftRight 12).land 0xF) == 0x1100 then some .OP_JMP -- .OP_RET
-  else if ((instr.shiftRight 12).land 0xF) == 0x0100 then some .OP_JSR
-  else if ((instr.shiftRight 12).land 0xF) == 0x0010 then some .OP_LD
-  else if ((instr.shiftRight 12).land 0xF) == 0x1010 then some .OP_LDI
-  else if ((instr.shiftRight 12).land 0xF) == 0x0110 then some .OP_LDR
-  else if ((instr.shiftRight 12).land 0xF) == 0x1110 then some .OP_LEA
-  else if ((instr.shiftRight 12).land 0xF) == 0x1001 then some .OP_NOT
-  else if ((instr.shiftRight 12).land 0xF) == 0x1000 then some .OP_RTI
-  else if ((instr.shiftRight 12).land 0xF) == 0x0011 then some .OP_ST
-  else if ((instr.shiftRight 12).land 0xF) == 0x1011 then some .OP_STI
-  else if ((instr.shiftRight 12).land 0xF) == 0x0111 then some .OP_STR
-  else if ((instr.shiftRight 12).land 0xF) == 0x1111 then some .OP_TRAP
-  else if ((instr.shiftRight 12).land 0xF) == 0x1101 then some .OP_RES -- unused
-  else none
+  match (instr.shiftRight 12).land 0xF with
+  | 0  => some .OP_BR
+  | 1  => some .OP_ADD
+  | 2  => some .OP_LD
+  | 3  => some .OP_ST
+  | 4  => some .OP_JSR
+  | 5  => some .OP_AND
+  | 6  => some .OP_LDR
+  | 7  => some .OP_STR
+  | 8  => some .OP_RTI
+  | 9  => some .OP_NOT
+  | 10 => some .OP_LDI
+  | 11 => some .OP_STI
+  | 12 => some .OP_JMP
+  | 13 => some .OP_RES
+  | 14 => some .OP_LEA
+  | 15 => some .OP_TRAP
+  | _  => none
 
 
 end Instructions

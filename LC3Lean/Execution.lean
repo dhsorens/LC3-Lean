@@ -19,8 +19,12 @@ def sign_extend (x : UInt16) (bit_count : UInt16) : UInt16 :=
   then x.lor (0xFFF <<< bit_count)
   else x
 
-#eval sign_extend 0b0111 4  -- 7
-#eval sign_extend 0b1000 4  -- -8
+-- test cases
+-- #eval sign_extend 0b0000 4  -- 0
+-- #eval sign_extend 0b0001 4  -- 1
+-- #eval sign_extend 0b0010 4  -- 2
+-- #eval sign_extend 0b0111 4  -- 7
+-- #eval sign_extend 0b1000 4  -- -8
 
 def set_condition_codes (reg : Register) (value : UInt16) : Register :=
   let cond :=
@@ -40,17 +44,18 @@ def op_add (instr : UInt16) (reg : Register) (mem : Memory) :
   -- if bit[5] == 0 then DR = SR1 + SR2
   if (instr >>> 5).land 0x1 == 0x0 then
     let sr2 := instr.land 0x7
-    -- load from register
     let res2 ← Registers.read reg sr2
-    -- add them together and write to the register
-    let reg' ← Registers.write reg dr (res1 + res2)
-    some (reg', mem)
+    let value := res1 + res2
+    let reg' ← Registers.write reg dr value
+    let reg'' := set_condition_codes reg' value
+    some (reg'', mem)
   -- else DR = SR1 + SEXT(imm5)
-  else -- (instr >>> 5).land 0x1 == 0x1
+  else
     let imm := sign_extend (instr.land 0x1F) 5
-    -- add them together and write to the register
-    let reg' ← Registers.write reg dr (res1 + imm)
-    some (reg', mem)
+    let value := res1 + imm
+    let reg' ← Registers.write reg dr value
+    let reg'' := set_condition_codes reg' value
+    some (reg'', mem)
 
 def op_and (instr : UInt16) (reg : Register) (mem : Memory) :
   Option (Register × Memory) := do
@@ -60,22 +65,23 @@ def op_and (instr : UInt16) (reg : Register) (mem : Memory) :
   -- if bit[5] == 0 then DR = SR1 AND SR2
   if (instr >>> 5).land 0x1 == 0x0 then
     let sr2 := instr.land 0x7
-    -- load from register
     let res2 ← Registers.read reg sr2
-    -- take .land and write to the register
-    let reg' ← Registers.write reg dr (res1.land res2)
-    some (reg', mem)
-  else -- (instr >>> 5).land 0x1 == 0x1
-    let imm := sign_extend (instr.land 0x31) 5
-    -- take .land and write to the register
-    let reg' ← Registers.write reg dr (res1.land imm)
-    some (reg', mem)
+    let value := res1.land res2
+    let reg' ← Registers.write reg dr value
+    let reg'' := set_condition_codes reg' value
+    some (reg'', mem)
+  else
+    let imm := sign_extend (instr.land 0x1F) 5
+    let value := res1.land imm
+    let reg' ← Registers.write reg dr value
+    let reg'' := set_condition_codes reg' value
+    some (reg'', mem)
 
 def op_br (instr : UInt16) (reg : Register) (mem : Memory) :
   Option (Register × Memory) := do
-  let n := (instr >>> 9).land 0x1
+  let n := (instr >>> 11).land 0x1
   let z := (instr >>> 10).land 0x1
-  let p := (instr >>> 11).land 0x1
+  let p := (instr >>> 9).land 0x1
   let cond := reg.cond
   if (n == 0x1 && cond == Registers.ConditionFlag.N) ||
      (z == 0x1 && cond == Registers.ConditionFlag.Z) ||
@@ -88,20 +94,24 @@ def op_br (instr : UInt16) (reg : Register) (mem : Memory) :
 
 -- JMP and RET
 def op_jmp (instr : UInt16) (reg : Register) (mem : Memory) :
-  Option (Register × Memory) :=
+  Option (Register × Memory) := do
   let base_r := (instr >>> 6).land 0x7
-  let reg' := { reg with pc := base_r }
-  some (reg',mem)
+  let base_val ← Registers.read reg base_r
+  let reg' := { reg with pc := base_val }
+  some (reg', mem)
 
 -- JSR and JSRR
 def op_jsr (instr : UInt16) (reg : Register) (mem : Memory) :
   Option (Register × Memory) := do
   let bit := (instr >>> 11).land 0x1
-  if bit == 0x0 then
-    let pc' := (instr >>> 6).land 0x7
-    let reg' := { reg with pc := pc' }
-    some (reg',mem)
-  else -- bit == 0x1
+  if bit == 0x0 then -- JSRR: PC = BaseR
+    let base_r := (instr >>> 6).land 0x7
+    let base_val ← Registers.read reg base_r -- read before saving R7
+    let reg ← Registers.write reg 7 reg.pc   -- R7 = PC
+    let reg' := { reg with pc := base_val }
+    some (reg', mem)
+  else -- JSR: PC = PC + SEXT(PCoffset11)
+    let reg ← Registers.write reg 7 reg.pc   -- R7 = PC
     let offset := sign_extend (instr.land 0x7FF) 11
     let reg' := { reg with pc := reg.pc + offset }
     some (reg', mem)
@@ -113,11 +123,7 @@ def op_ld (instr : UInt16) (reg : Register) (mem : Memory) :
   let addr := reg.pc + offset
   let value := Memory.read mem addr
   let reg' ← Registers.write reg dr value
-  let cond :=
-    if value == 0 then Registers.ConditionFlag.Z
-    else if value.land 0x8000 != 0 then Registers.ConditionFlag.N
-    else Registers.ConditionFlag.P
-  let reg'' := { reg' with cond := cond }
+  let reg'' := set_condition_codes reg' value
   some (reg'', mem)
 
 def op_ldi (instr : UInt16) (reg : Register) (mem : Memory) :
@@ -235,21 +241,21 @@ def execute_step (reg : Register) (mem : Memory) : Option (Register × Memory) :
   -- 4. Perform the instruction using the parameters in the instruction.
   let (reg,mem) ←
     match instr' with
-    | .OP_BR   => op_br instr reg mem -- branch
-    | .OP_ADD  => op_add instr reg mem -- add
-    | .OP_LD   => op_ld instr reg mem -- load
-    | .OP_ST   => op_st instr reg mem -- store
-    | .OP_JSR  => op_jsr instr reg mem -- jump register
-    | .OP_AND  => op_and instr reg mem -- bitwise and
-    | .OP_LDR  => op_ldr instr reg mem -- load register
-    | .OP_STR  => op_str instr reg mem -- store register
-    | .OP_RTI  => op_rti instr reg mem -- unused
-    | .OP_NOT  => op_not instr reg mem -- bitwise not
-    | .OP_LDI  => op_ldi instr reg mem -- load indirect
-    | .OP_STI  => op_sti instr reg mem -- store indirect
-    | .OP_JMP  => op_jmp instr reg mem -- jump
-    | .OP_RES  => op_res instr reg mem -- reserved (unused)
-    | .OP_LEA  => op_lea instr reg mem -- load effective address
+    | .OP_BR   => op_br   instr reg mem -- branch
+    | .OP_ADD  => op_add  instr reg mem -- add
+    | .OP_LD   => op_ld   instr reg mem -- load
+    | .OP_ST   => op_st   instr reg mem -- store
+    | .OP_JSR  => op_jsr  instr reg mem -- jump register
+    | .OP_AND  => op_and  instr reg mem -- bitwise and
+    | .OP_LDR  => op_ldr  instr reg mem -- load register
+    | .OP_STR  => op_str  instr reg mem -- store register
+    | .OP_RTI  => op_rti  instr reg mem -- unused
+    | .OP_NOT  => op_not  instr reg mem -- bitwise not
+    | .OP_LDI  => op_ldi  instr reg mem -- load indirect
+    | .OP_STI  => op_sti  instr reg mem -- store indirect
+    | .OP_JMP  => op_jmp  instr reg mem -- jump
+    | .OP_RES  => op_res  instr reg mem -- reserved (unused)
+    | .OP_LEA  => op_lea  instr reg mem -- load effective address
     | .OP_TRAP => op_trap instr reg mem -- execute trap
   -- 5. Go back to step 1.
   some (reg,mem) -- execute reg' mem' (or could use concept of gas ... max steps)

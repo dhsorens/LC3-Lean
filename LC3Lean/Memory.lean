@@ -4,11 +4,11 @@ namespace Memory
 def MEMORY_MAX := 2 ^ 16
 
 structure Memory where
-  data : Array UInt16 := Array.mkArray MEMORY_MAX (0 : UInt16)
+  data : Array UInt16 := Array.replicate MEMORY_MAX (0 : UInt16)
   deriving DecidableEq, BEq
 
 def init : Memory :=
-  { data := Array.mkArray (2 ^ 16) (0 : UInt16) }
+  { data := Array.replicate (2 ^ 16) (0 : UInt16) }
 
 def read (mem : Memory) (addr : UInt16) : UInt16 :=
   mem.data[addr.toFin]!
