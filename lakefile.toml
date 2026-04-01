@@ -7,7 +7,7 @@ name = "LC3Lean"
 
 [[lean_lib]]
 name = "LC3Correct"
-globs = ["LC3Correct", "LC3Correct.ExecutionCorrect", "LC3Correct.RegisterLemmas", "LC3Correct.MemoryLemmas"]
+roots = ["LC3Correct.LC3Correct", "LC3Correct.ExecutionCorrect", "LC3Correct.RegisterLemmas", "LC3Correct.MemoryLemmas"]
 
 [[lean_exe]]
 name = "lc3-lean"
