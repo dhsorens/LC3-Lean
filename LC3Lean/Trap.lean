@@ -21,6 +21,9 @@ section aux
   def clear_high_bits (b : UInt16) : UInt16 := b.land 0x00FF
   def clear_low_bits (b : UInt16) : UInt16 := b.land 0xFF00
 
+  def flush_stdout : IO Unit := do
+    (← IO.getStdout).flush
+
 end aux
 
 -- Write a string of ASCII characters to the console display.
@@ -37,6 +40,7 @@ def trap_puts (reg : Register) (mem : Memory) : IO Unit := do
     IO.print (uint16_to_char c)
     index := index + 1
     c := Memory.read mem index
+  flush_stdout
 
   -- Read a single character from the keyboard.
   -- The character is not echoed onto the console.
@@ -52,7 +56,7 @@ def trap_getc (reg : Register) : IO Register := do
 -- Write a character in R0[7:0] to the console display.
 def trap_out (reg : Register) : IO Unit := do
   match Registers.read reg 0 with
-  | some char => IO.print (uint16_to_char (clear_high_bits char))
+  | some char => IO.print (uint16_to_char (clear_high_bits char)); flush_stdout
   | none => throw $ IO.userError "Error: Unable to access storage."
 
 -- Print a prompt on the screen and read a single character from the keyboard.
@@ -61,7 +65,7 @@ def trap_out (reg : Register) : IO Unit := do
 def trap_in (reg : Register) : IO Register := do
   IO.print "Enter a character: "
   let c ← get_char_from_terminal
-  IO.print c
+  IO.print c; flush_stdout
   match Registers.write reg 0 (clear_high_bits (char_to_uint16 c)) with
   | some r => pure r
   | none => throw $ IO.userError "Error: Unable to access storage."
@@ -86,6 +90,7 @@ def trap_putsp (mem : Memory) (reg : Register) : IO Unit := do
     IO.print (uint16_to_char c2)
     index := index + 1
     c := Memory.read mem index
+  flush_stdout
 
 -- Halt execution and print a message on the console.
 def trap_halt (running : IO.Ref Bool) : IO Unit := do
