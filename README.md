@@ -25,3 +25,12 @@ If you add `path-to-dir/.lake/build/bin/` to your PATH you can simply run
 ```
 lc3-lean programs/2048.obj
 ```
+
+<!-- # TODO:
+* state changes, jumps
+* custom tactics 
+* initial state/induction over state trace
+
+Once implemented, might go through examples at [this link](https://github.com/dideler/LC-3-Programs) and formally verify them. -->
+
+<!-- export PATH="/Users/dhsorens/devel/lean/LC3-Lean/.lake/build/bin:$PATH" -->

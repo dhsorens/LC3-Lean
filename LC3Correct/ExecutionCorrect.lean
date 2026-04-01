@@ -1,11 +1,19 @@
 import LC3Lean.Execution
 open Execution
+open Registers
+open Memory
 
 -- formal specification of opcode semantics
 
+section Instructions
+
+-- todo a specification that instructions go to the right places
+
+end Instructions
+
 section ADD
 
--- Specification for op_add:
+-- Specification for a successful call to op_add:
 -- Given an instruction instr, registers reg, and memory mem
 -- Returns Some (reg', mem) where:
 -- 1. If bit[5] = 0:
@@ -21,28 +29,50 @@ section ADD
 -- 3. Memory is unchanged
 -- 4. Returns None if register reads/writes fail
 
-theorem op_add_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
-  match op_add instr reg mem with
-  | none => true -- register access failed
-  | some (reg', mem') =>
-    let dr := (instr >>> 9).land 0x7
-    let sr1 := (instr >>> 6).land 0x7
-    let mode := (instr >>> 5).land 0x1
-    let sr2 := instr.land 0x7
-    let imm5 := sign_extend (instr.land 0x1F) 5
-    -- Memory unchanged
-    mem' = mem ∧
-    -- Result depends on mode bit
-    (mode = 0 →
-      ∀ r1 r2,
-      Registers.read reg sr1 = some r1 →
-      Registers.read reg sr2 = some r2 →
-      Registers.write reg dr (r1 + r2) = some reg') ∧
-    (mode = 1 →
-      ∀ r1,
-      Registers.read reg sr1 = some r1 →
-      Registers.write reg dr (r1 + imm5) = some reg')
-    := by sorry
+theorem op_add_spec (instr : UInt16) (reg : Register) (mem : Memory) :
+  ∀ (reg' : Register) (mem' : Memory),
+  let dr := (instr >>> 9).land 0x7
+  let sr1 := (instr >>> 6).land 0x7
+  let mode := (instr >>> 5).land 0x1
+  let sr2 := instr.land 0x7
+  let imm5 := sign_extend (instr.land 0x1F) 5
+  op_add instr reg mem = some (reg', mem') →
+  -- Memory unchanged
+  mem' = mem ∧
+  -- Result depends on mode bit
+  (mode = 0 →
+    ∀ r1 r2,
+    Registers.read reg sr1 = some r1 →
+    Registers.read reg sr2 = some r2 →
+    Registers.write reg dr (r1 + r2) = some reg') ∧
+  (mode = 1 →
+    ∀ r1,
+    Registers.read reg sr1 = some r1 →
+    Registers.write reg dr (r1 + imm5) = some reg') := by
+    -- proof
+    intro reg' mem' dr sr1 mode sr2 imm5
+    -- get all the information from op_add; proves mem' = mem
+    unfold op_add
+    simp
+    cases (Registers.read reg ((instr >>> 6).land 7)) with | none => simp | some res1 =>
+    simp
+    cases (Registers.read reg (instr.land 7)) with | none => sorry | some res2 =>
+    simp
+    cases (Registers.write reg ((instr >>> 9).land 7) (res1 + res2)) with | none => sorry | some reg'' =>
+    simp
+    by_cases h_mode : ((instr >>> 5).land 1 = 0)
+    -- get the mode bit ; proceed with cases
+    . intro h_add
+      rw [h_mode] at h_add ; simp at h_add
+      cases h_add with | intro h_reg h_mem =>
+      constructor ; rw [h_mem]
+      constructor
+      . intro _ ; exact h_reg
+      . intro _ ; rw [←h_reg]
+        sorry -- should already be solved
+    . intro h_add
+
+      sorry
 
 
 end ADD
@@ -66,28 +96,65 @@ section AND
 -- 3. Memory is unchanged
 -- 4. Returns None if register reads/writes fail
 
-theorem op_and_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
-  match op_and instr reg mem with
-  | none => true -- register access failed
-  | some (reg', mem') =>
-    let dr := (instr >>> 9).land 0x7
-    let sr1 := (instr >>> 6).land 0x7
-    let mode := (instr >>> 5).land 0x1
-    let sr2 := instr.land 0x7
-    let imm5 := sign_extend (instr.land 0x1F) 5
-    -- Memory unchanged
-    mem' = mem ∧
-    -- Result depends on mode bit
-    (mode = 0 →
-      ∀ r1 r2,
-      Registers.read reg sr1 = some r1 →
-      Registers.read reg sr2 = some r2 →
-      Registers.write reg dr (r1.land r2) = some reg') ∧
-    (mode = 1 →
-      ∀ r1,
-      Registers.read reg sr1 = some r1 →
-      Registers.write reg dr (r1.land imm5) = some reg')
-    := by sorry
+theorem op_and_spec (instr : UInt16) (reg : Register) (mem : Memory) :
+  ∀ (reg' : Register) (mem' : Memory),
+  op_and instr reg mem = some (reg', mem') →
+  let dr := (instr >>> 9).land 0x7
+  let sr1 := (instr >>> 6).land 0x7
+  let mode := (instr >>> 5).land 0x1
+  let sr2 := instr.land 0x7
+  let imm5 := sign_extend (instr.land 0x1F) 5
+  -- Memory unchanged
+  mem' = mem ∧
+  -- Result depends on mode bit
+  (mode = 0 →
+    ∀ r1 r2,
+    Registers.read reg sr1 = some r1 →
+    Registers.read reg sr2 = some r2 →
+    Registers.write reg dr (r1.land r2) = some reg') ∧
+  (mode = 1 →
+    ∀ r1,
+    Registers.read reg sr1 = some r1 →
+    Registers.write reg dr (r1.land imm5) = some reg') := by
+  intro reg' mem'
+  unfold op_and ; simp
+  cases (Registers.read reg ((instr >>> 6).land 7)) with | none => simp | some res1 =>
+  simp
+  intro h_and
+  constructor
+  . by_cases h_1 : ((instr >>> 5).land 1 = 0)
+    . rw [h_1] at h_and ; simp at h_and
+      sorry
+    . sorry
+  . constructor
+    . intro h_land
+      rw [h_land] at h_and ; simp at h_and
+      intro r1 r2 h_r1 h_r2
+      rw [h_r2] at h_and ; simp at h_and
+      sorry
+    . sorry
+
+
+  -- by_cases h_mode : ((instr >>> 5).land 1 = 0)
+  -- -- get the mode bit ; proceed with cases
+  -- . rw [h_mode]; simp
+  --   cases (Registers.read reg (instr.land 7)) with | none => simp | some res2 =>
+  --   simp
+  --   cases (Registers.write reg ((instr >>> 9).land 7) (res1.land res2)) with | none => simp | some reg'' =>
+  --   simp
+  --   intro h_reg h_mem ; rw [h_reg,h_mem]
+  --   simp
+  -- . have h_null : (instr >>> 5).land 1 = 1 := by sorry
+  --   rw [h_null]; simp -- TODO
+  --   cases (Registers.write reg ((instr >>> 9).land 7)
+  --     (res1.land (sign_extend (instr.land 49) 5))) with
+  --   | none => simp
+  --   | some reg'' =>
+  --     simp
+  --     intro h_reg h_mem ; rw [h_mem]
+  --     constructor ; simp
+  --     -- bug?
+  --     sorry
 
 end AND
 
@@ -103,7 +170,7 @@ section BR
 -- 2. Memory is unchanged
 -- 3. Returns None if register access fails
 
-theorem op_br_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
+theorem op_br_spec (instr : UInt16) (reg : Register) (mem : Memory) :
   match op_br instr reg mem with
   | none => true
   | some (reg', mem') =>
@@ -137,7 +204,7 @@ section JMP
 -- 3. Returns None if register access fails
 -- Note: RET is a special case where BaseR = R7
 
-theorem op_jmp_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
+theorem op_jmp_spec (instr : UInt16) (reg : Register) (mem : Memory) :
   match op_jmp instr reg mem with
   | none => true
   | some (reg', mem') =>
@@ -163,7 +230,7 @@ section JSR
 -- 4. Memory is unchanged
 -- 5. Returns None if register access fails
 
-theorem op_jsr_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
+theorem op_jsr_spec (instr : UInt16) (reg : Register) (mem : Memory) :
   match op_jsr instr reg mem with
   | none => true
   | some (reg', mem') =>
@@ -193,7 +260,7 @@ section LD
 -- 3. Memory is unchanged
 -- 4. Returns None if register access fails
 
-theorem op_ld_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
+theorem op_ld_spec (instr : UInt16) (reg : Register) (mem : Memory) :
   match op_ld instr reg mem with
   | none => true
   | some (reg', mem') =>
@@ -224,7 +291,7 @@ section LDI
 -- 3. Memory is unchanged
 -- 4. Returns None if register access fails
 
-theorem op_ldi_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
+theorem op_ldi_spec (instr : UInt16) (reg : Register) (mem : Memory) :
   match op_ldi instr reg mem with
   | none => true
   | some (reg', mem') =>
@@ -257,7 +324,7 @@ section LDR
 -- 3. Memory is unchanged
 -- 4. Returns None if register access fails
 
-theorem op_ldr_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
+theorem op_ldr_spec (instr : UInt16) (reg : Register) (mem : Memory) :
   match op_ldr instr reg mem with
   | none => true
   | some (reg', mem') =>
@@ -291,7 +358,7 @@ section LEA
 -- 3. Memory is unchanged
 -- 4. Returns None if register access fails
 
-theorem op_lea_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
+theorem op_lea_spec (instr : UInt16) (reg : Register) (mem : Memory) :
   match op_lea instr reg mem with
   | none => true
   | some (reg', mem') =>
@@ -321,7 +388,7 @@ section NOT
 -- 3. Memory is unchanged
 -- 4. Returns None if register access fails
 
-theorem op_not_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
+theorem op_not_spec (instr : UInt16) (reg : Register) (mem : Memory) :
   match op_not instr reg mem with
   | none => true
   | some (reg', mem') =>
@@ -352,7 +419,7 @@ section ST
 -- 2. Registers unchanged
 -- 3. Returns None if register access fails
 
-theorem op_st_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
+theorem op_st_spec (instr : UInt16) (reg : Register) (mem : Memory) :
   match op_st instr reg mem with
   | none => true
   | some (reg', mem') =>
@@ -380,7 +447,7 @@ section STI
 -- 2. Registers unchanged
 -- 3. Returns None if register access fails
 
-theorem op_sti_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
+theorem op_sti_spec (instr : UInt16) (reg : Register) (mem : Memory) :
   match op_sti instr reg mem with
   | none => true
   | some (reg', mem') =>
@@ -410,7 +477,7 @@ section STR
 -- 2. Registers unchanged
 -- 3. Returns None if register access fails
 
-theorem op_str_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
+theorem op_str_spec (instr : UInt16) (reg : Register) (mem : Memory) :
   match op_str instr reg mem with
   | none => true
   | some (reg', mem') =>
@@ -439,7 +506,7 @@ section TRAP
 -- 3. Memory is unchanged
 -- 4. Returns None if register access fails
 
-theorem op_trap_spec (instr : UInt16) (reg : Registers.Register) (mem : Memory.Memory) :
+theorem op_trap_spec (instr : UInt16) (reg : Register) (mem : Memory) :
   match op_trap instr reg mem with
   | none => true
   | some (reg', mem') =>
